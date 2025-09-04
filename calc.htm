@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storytelling Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #111827; /* Tailwind gray-900 */
+    }
+    .calculator-card {
+      font-family: 'Inter', sans-serif;
+      background: #1F2937; /* Tailwind gray-800 */
+      border: 1px solid #374151; /* Tailwind gray-700 */
+    }
+    .result-screen {
+      font-family: 'Playfair Display', serif;
+      min-height: 150px;
+      overflow-wrap: break-word;
+    }
+    .btn-operator {
+      transition: all 0.2s ease-in-out;
+    }
+    .btn-operator:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.2);
+      border-left-color: #4f46e5; /* Tailwind indigo-600 */
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen text-white p-4">
+
+  <div class="calculator-card w-full max-w-md mx-auto rounded-2xl p-6 shadow-2xl">
+    <h1 class="text-3xl font-bold text-center mb-2 text-indigo-400">Storytelling Calculator</h1>
+    <p class="text-center text-gray-400 mb-6">Where numbers come to life.</p>
+
+    <!-- Result Screen -->
+    <div id="result-screen" class="result-screen bg-gray-900 rounded-lg p-4 mb-6 text-center flex items-center justify-center border border-gray-700">
+      <p id="result-text" class="text-gray-300 text-lg">Your story awaits...</p>
+      <div id="loader" class="spinner hidden"></div>
+    </div>
+
+    <!-- Input Fields -->
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <input type="text" inputmode="numeric" id="num1" placeholder="First number" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-center text-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+      <input type="text" inputmode="numeric" id="num2" placeholder="Second number" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-center text-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+    </div>
+
+    <!-- Operator Buttons -->
+    <div class="grid grid-cols-4 gap-4">
+      <button onclick="performCalculation('+')" class="btn-operator bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg text-2xl shadow-lg">+</button>
+      <button onclick="performCalculation('-')" class="btn-operator bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg text-2xl shadow-lg">−</button>
+      <button onclick="performCalculation('*')" class="btn-operator bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg text-2xl shadow-lg">×</button>
+      <button onclick="performCalculation('/')" class="btn-operator bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg text-2xl shadow-lg">÷</button>
+    </div>
+    
+    <!-- Error Message -->
+    <p id="error-message" class="text-red-400 text-center mt-4 h-5"></p>
+  </div>
+
+  <script>
+    const resultText = document.getElementById('result-text');
+    const loader = document.getElementById('loader');
+    const errorMessage = document.getElementById('error-message');
+
+    async function performCalculation(operator) {
+      const num1Input = document.getElementById('num1');
+      const num2Input = document.getElementById('num2');
+      
+      errorMessage.textContent = '';
+      
+      let num1, num2;
+
+      try {
+        const num1String = num1Input.value.trim();
+        const num2String = num2Input.value.trim();
+        
+        if (!/^-?\d+$/.test(num1String) || !/^-?\d+$/.test(num2String)) {
+          throw new Error("Invalid integer format.");
+        }
+
+        num1 = BigInt(num1String);
+        num2 = BigInt(num2String);
+      } catch (error) {
+        errorMessage.textContent = 'Please enter valid whole numbers.';
+        return;
+      }
+
+      let result;
+      let operationSymbol = operator;
+
+      switch (operator) {
+        case '+':
+          result = num1 + num2;
+          break;
+        case '-':
+          result = num1 - num2;
+          break;
+        case '*':
+          result = num1 * num2;
+          operationSymbol = '×';
+          break;
+        case '/':
+          if (num2 === 0n) {
+            errorMessage.textContent = 'Cannot divide by zero.';
+            return;
+          }
+          result = num1 / num2; // BigInt division
+          operationSymbol = '÷';
+          break;
+        default:
+          return;
+      }
+
+      // Show loading
+      resultText.classList.add('hidden');
+      loader.classList.remove('hidden');
+
+      try {
+        const num1Formatted = num1.toString();
+        const num2Formatted = num2.toString();
+        const resultFormatted = result.toString();
+
+        const story = await generateStory(num1Formatted, operationSymbol, num2Formatted, resultFormatted);
+        resultText.innerHTML = `<strong class="text-indigo-300 block mb-2 text-2xl">${num1Formatted} ${operationSymbol} ${num2Formatted} = ${resultFormatted}</strong>${story}`;
+      } catch (error) {
+        console.error('Error generating story:', error);
+        errorMessage.textContent = 'Failed to generate story.';
+        resultText.innerHTML = `<strong class="text-red-400">An error occurred.</strong>`;
+      } finally {
+        loader.classList.add('hidden');
+        resultText.classList.remove('hidden');
+      }
+    }
+
+    // FIXED: generateStory with fallback
+    async function generateStory(num1, op, num2, res) {
+      const fallbackStories = [
+        (a, o, b, r) => `Two quiet numbers, ${a} and ${b}, met under the ${o} moon and became ${r}.`,
+        (a, o, b, r) => `${a} ${o} ${b} wasn’t just math—it was a tiny quest. They discovered the treasure of ${r}.`,
+        (a, o, b, r) => `On the chalkboard, ${a} ${o} ${b} danced joyfully, and ${r} took a bow.`,
+        (a, o, b, r) => `${a} and ${b} built a bridge with ${o}, and on the far side awaited ${r}.`
+      ];
+      const pickFallback = () => {
+        const make = fallbackStories[Math.floor(Math.random() * fallbackStories.length)];
+        return make(num1, op, num2, res);
+      };
+
+      const apiKey = ""; // Optional: put your Gemini API key here
+      if (!apiKey) return pickFallback();
+
+      const systemPrompt =
+        "You are a whimsical storyteller. Your task is to explain a simple math calculation in a creative, imaginative, and brief story or phrase. Avoid technical jargon. Keep it magical, 2–3 sentences max.";
+      const userQuery = `The calculation is: ${num1} ${op} ${num2} = ${res}. Now, tell me the story of this result.`;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+      const payload = {
+        contents: [{ parts: [{ text: userQuery }] }],
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+      };
+
+      for (let i = 0; i < 3; i++) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const json = await response.json();
+          const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text && typeof text === 'string') return text;
+          throw new Error("Unexpected API response shape");
+        } catch (e) {
+          if (i === 2) return pickFallback();
+          await new Promise(r => setTimeout(r, Math.pow(2, i) * 300));
+        }
+      }
+      return pickFallback();
+    }
+  </script>
+</body>
+</html>
